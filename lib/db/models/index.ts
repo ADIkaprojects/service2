@@ -47,3 +47,6 @@ export type { IPipelineJob, PipelineJobType, PipelineJobStatus } from './Pipelin
 
 export { default as AuditLog } from './AuditLog';
 export type { IAuditLog, AuditActor } from './AuditLog';
+
+export { default as GoogleAccount } from './GoogleAccount';
+export type { IGoogleAccount } from './GoogleAccount';

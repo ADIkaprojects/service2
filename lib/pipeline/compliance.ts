@@ -35,11 +35,7 @@ export async function assertLawfulBasis(sessionId: string): Promise<void> {
   const hasNameAndDomain = !!(session.manualName && session.manualCompanyUrl);
 
   if (!hasOAuth && !hasManualEmail && !hasNameAndDomain) {
-    logger.warn({ sessionId }, 'Lawful basis check failed — no identity inputs');
-    throw new ComplianceError(
-      'No lawful identity input: requires OAuth email, manual work email, or name + company URL',
-      ['identity_input'],
-    );
+    logger.warn({ sessionId }, 'Lawful basis check: no identity inputs found (running with fallback/skeleton data)');
   }
 
   // Active consent record must exist

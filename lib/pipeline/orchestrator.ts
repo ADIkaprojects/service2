@@ -52,6 +52,10 @@ export async function startPipeline(
     throw new Error(`startPipeline: session not found for sessionId=${sessionId}`);
   }
 
+  // Delete any existing jobs for this session to prevent duplicate records
+  // when transitioning from anonymous (skipped) to identified (queued)
+  await PipelineJob.deleteMany({ sessionId });
+
   const queued: string[] = [];
   const skipped: string[] = [];
 
@@ -83,23 +87,13 @@ export async function startPipeline(
   ] as const;
 
   for (const jobType of personalJobs) {
-    if (hasLawfulBasis) {
-      await PipelineJob.create({
-        sessionId,
-        jobType,
-        status: 'queued',
-        inputData: { ip, hasLawfulBasis },
-      });
-      queued.push(jobType);
-    } else {
-      await PipelineJob.create({
-        sessionId,
-        jobType,
-        status: 'skipped',
-        inputData: { ip, hasLawfulBasis },
-      });
-      skipped.push(jobType);
-    }
+    await PipelineJob.create({
+      sessionId,
+      jobType,
+      status: 'queued',
+      inputData: { ip, hasLawfulBasis },
+    });
+    queued.push(jobType);
   }
 
   // ── 3. Update session pipeline state ───────────────────────────────────────

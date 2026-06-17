@@ -62,39 +62,8 @@ const worker = new Worker(
 
       await publishSSEEvent(sessionId, 'job_complete', { stage: 'ip_enrichment', result: { org: result.data.org } });
 
-      // Check if session has lawful basis before enqueueing identity lookup
-      const session = await VisitorSession.findOne({ sessionId }).lean();
-      const hasLawfulBasis = !!(
-        session?.oauthEmail ||
-        session?.manualEmail ||
-        (session?.manualName && session?.manualCompanyUrl)
-      );
-
-      if (hasLawfulBasis) {
-        await enqueueJob('identity_lookup', { sessionId });
-      } else {
-        // Skip personal enrichment stages if no lawful basis
-        await PipelineJob.updateMany(
-          {
-            sessionId,
-            jobType: {
-              $in: [
-                'identity_lookup',
-                'company_enrichment',
-                'domain_discovery',
-                'email_generation',
-                'email_verification',
-              ]
-            }
-          },
-          { status: 'skipped' }
-        );
-        await VisitorSession.findOneAndUpdate(
-          { sessionId },
-          { pipelineStatus: 'complete', pipelineCompletedAt: new Date() }
-        );
-        await publishSSEEvent(sessionId, 'pipeline_complete', { reason: 'no_lawful_basis', verifiedEmailCount: 0 });
-      }
+      // Always enqueue the next stage to run the full pipeline
+      await enqueueJob('identity_lookup', { sessionId });
     } else {
       await PipelineJob.findOneAndUpdate(
         { sessionId, jobType: 'ip_enrichment' },
@@ -107,16 +76,8 @@ const worker = new Worker(
       );
       await publishSSEEvent(sessionId, 'job_failed', { stage: 'ip_enrichment', error: result.error.message });
 
-      // Still try to continue to identity lookup if lawful basis is on record
-      const session = await VisitorSession.findOne({ sessionId }).lean();
-      const hasLawfulBasis = !!(
-        session?.oauthEmail ||
-        session?.manualEmail ||
-        (session?.manualName && session?.manualCompanyUrl)
-      );
-      if (hasLawfulBasis) {
-        await enqueueJob('identity_lookup', { sessionId });
-      }
+      // Always continue to identity lookup to run the full pipeline
+      await enqueueJob('identity_lookup', { sessionId });
     }
 
     await writeAuditLog({

@@ -90,6 +90,7 @@ export function ConsentCard() {
       }
 
       const activeSessionId = resJson.data.sessionId;
+      localStorage.setItem('signal_session_id', activeSessionId);
 
       // 2. Immediately trigger the anonymous pipeline (IP enrichment only)
       const anonRes = await fetch('/api/pipeline/anonymous', {
